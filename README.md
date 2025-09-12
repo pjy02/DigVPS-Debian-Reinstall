@@ -10,16 +10,16 @@ A Debian reinstallation script
 # Interactive scripting with support for hostname, ssh port, password and bbr settings
 apt update
 apt install curl wget net-tools -y
-bash <(curl -sL https://github.com/bihell/debian-dd/raw/main/debian-dd)
+bash <(curl -sL https://github.com/bihell/debian-dd/raw/main/debian-dd.sh)
 ```
 
 ## 0x02 VPS purchase
 
-My VPS Documentation：[https://bigdata.icu/tools/vps.html](https://bigdata.icu/tools/vps.html)
+My VPS Review Site [DigVPS.COM](https://digvps.com/)
 
 ## 0x03 Subscribe to my channel
 
-[YouTube](https://www.youtube.com/channel/UCINmrFonh6v0VTyWhudSQ2w)、[bilibili](https://space.bilibili.com/88900889)、[xigua](https://www.ixigua.com/home/940801951008103)
+[YouTube](https://www.youtube.com/channel/UCINmrFonh6v0VTyWhudSQ2w)、[bilibili](https://space.bilibili.com/88900889)
 
 ## 0x04 ScreenShot
 
