@@ -17,7 +17,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "-----------------------------------------------------------------"
-echo "This script was written by『${aoiBlue}DigVPS.COM』{plain}"
+echo -e "This script was written by『${aoiBlue}DigVPS.COM』{plain}"
 echo -e "${aoiBlue}VPS Review Site${plain}: https://digvps.com/"
 echo "-----------------------------------------------------------------"
 echo "Welcome to subscribe to my channel"
