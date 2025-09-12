@@ -17,9 +17,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "-----------------------------------------------------------------"
-echo "This script was written by『DigVPS』"
-echo "If you have any questions, please raise an issue. "
-echo -e "${aoiBlue}GitHub${plain}: https://github.com/bihell/debian-dd"
+echo "This script was written by『${aoiBlue}DigVPS.COM』{plain}"
 echo -e "${aoiBlue}VPS Review Site${plain}: https://digvps.com/"
 echo "-----------------------------------------------------------------"
 echo "Welcome to subscribe to my channel"
@@ -28,9 +26,6 @@ echo -e "${aoiBlue}bilibili${plain}：https://space.bilibili.com/88900889"
 echo "-----------------------------------------------------------------"
 
 echo -en "\n${aoiBlue}Installation dependencies...${plain}\n"
-apt update
-apt install wget net-tools -y
-
 
 debian_version="trixie"
 
@@ -229,9 +224,6 @@ d-i netcfg/get_nameservers string $NAMESERVERS
 ${IPV4_ADDR:+d-i netcfg/confirm_static boolean true}
 # IPv6: enable and seed static values if detected; otherwise allow RA/DHCPv6
  d-i netcfg/enable_ipv6 boolean true
-${IPV6_ADDR:+d-i netcfg/ipv6/address string $IPV6_ADDR}
-${IPV6_PREFIX:+d-i netcfg/ipv6/prefix-length string $IPV6_PREFIX}
-${IPV6_GATEWAY:+d-i netcfg/ipv6/gateway string $IPV6_GATEWAY}
 
 ### Low memory mode
 d-i lowmem/low note
@@ -288,7 +280,29 @@ d-i grub-installer/bootdev string /dev/$DEVICE_PREFIX
 d-i preseed/late_command string \
 sed -ri 's/^#?PermitRootLogin.*/PermitRootLogin yes/g' /target/etc/ssh/sshd_config; \
 sed -ri 's/^#?Port.*/Port ${sshPORT}/g' /target/etc/ssh/sshd_config; \
-${BBR}
+${BBR} \
+ in-target apt-get update; \
+ in-target apt-get -y install systemd-networkd systemd-resolved; \
+ in-target mkdir -p /etc/systemd/network; \
+ in-target /bin/sh -c "printf '%s\n' \
+ '[Match]' \
+ 'Name=${PRIMARY_IFACE}' \
+ '' \
+ '[Network]' \
+ 'IPv6AcceptRA=no' \
+ ${IPV4_ADDR:+"'Address=${IPV4_ADDR}/${IPV4_PREFIX}'"} \
+ ${IPV4_GATEWAY:+"'Gateway=${IPV4_GATEWAY}'"} \
+ ${IPV6_ADDR:+"'Address=${IPV6_ADDR}/${IPV6_PREFIX}'"} \
+ ${IPV6_GATEWAY:+"'Gateway=${IPV6_GATEWAY}'"} \
+ ${IPV6_GW_ONLINK:+"'GatewayOnLink=yes'"} \
+ ${NAMESERVERS:+"'DNS=${NAMESERVERS}'"} \
+ > /etc/systemd/network/10-${PRIMARY_IFACE}.network"; \
+in-target ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf; \
+in-target systemctl enable systemd-networkd.service; \
+in-target systemctl enable systemd-resolved.service; \
+in-target systemctl restart systemd-networkd.service; \
+in-target systemctl restart systemd-resolved.service; \
+in-target apt-get -y purge ifupdown || true;
 ### Shutdown machine
 d-i finish-install/reboot_in_progress note
 EOF
@@ -317,7 +331,7 @@ echo "  Interface      : ${PRIMARY_IFACE}"
 if [ -n "${IPV4_ADDR}" ]; then echo "  IPv4           : ${IPV4_ADDR}/${IPV4_PREFIX}  gw ${IPV4_GATEWAY}"; else echo "  IPv4           : (none)"; fi
 if [ -n "${IPV6_ADDR}" ]; then echo "  IPv6           : ${IPV6_ADDR}/${IPV6_PREFIX}  gw ${IPV6_GATEWAY}"; else echo "  IPv6           : (none)"; fi
 echo "  DNS            : ${NAMESERVERS}"
-echo "-----------------------------------------------------------------\n"
+echo "-----------------------------------------------------------------"
 
 echo -ne "\n[${aoiBlue}Finish${plain}] Input '${red}reboot${plain}' to continue the subsequential installation.\n"
 exit 1
