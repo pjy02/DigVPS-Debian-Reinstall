@@ -153,10 +153,16 @@ IPV4_NETMASK=""
 if [ -n "$IPV4_PREFIX" ]; then IPV4_NETMASK=$(to_netmask "$IPV4_PREFIX"); fi
 
 # IPv6 details (global address only)
+# Detect IPv6 default gateway by explicitly extracting the token after 'via' and strip zone id (e.g., %eth0)
+IPV6_GATEWAY=$(ip -6 route show default dev "$PRIMARY_IFACE" 2>/dev/null \
+    | awk '($1=="default"){for(i=1;i<=NF;i++){if($i=="via"){print $(i+1); exit}}}' \
+    | sed 's/%.*//')
+# Sanity: if awk somehow yielded a bare integer (e.g., mis-parse), drop it
+if echo "$IPV6_GATEWAY" | grep -qE '^[0-9]+$'; then IPV6_GATEWAY=""; fi
+
 IPV6_CIDR=$(ip -6 -o addr show dev "$PRIMARY_IFACE" scope global | awk '{print $4}' | head -n1)
 IPV6_ADDR=${IPV6_CIDR%%/*}
 IPV6_PREFIX=${IPV6_CIDR##*/}
-IPV6_GATEWAY=$(ip -6 route show default dev "$PRIMARY_IFACE" 2>/dev/null | awk '/default/ {print $3; exit}')
 
 # If IPv6 gateway is link-local, networkd needs GatewayOnLink=yes
 IPV6_GW_ONLINK=""
