@@ -137,7 +137,6 @@ fi
 if [ -z "$PRIMARY_IFACE" ]; then
     echo "No physical network interface detected." && exit 1
 fi
-echo "Selected primary interface: $PRIMARY_IFACE"
 
 # IPv4 details
 IPV4_CIDR=$(ip -4 -o addr show dev "$PRIMARY_IFACE" scope global | awk '{print $4}' | head -n1)
@@ -163,6 +162,12 @@ IPV6_CIDR=$(ip -6 -o addr show dev "$PRIMARY_IFACE" scope global | awk '{print $
 IPV6_ADDR=${IPV6_CIDR%%/*}
 IPV6_PREFIX=${IPV6_CIDR##*/}
 IPV6_GATEWAY=$(ip -6 route show default dev "$PRIMARY_IFACE" 2>/dev/null | awk '/default/ {print $3; exit}')
+
+# If IPv6 gateway is link-local, networkd needs GatewayOnLink=yes
+IPV6_GW_ONLINK=""
+if [ -n "$IPV6_GATEWAY" ] && echo "$IPV6_GATEWAY" | grep -qi '^fe80:'; then
+    IPV6_GW_ONLINK="GatewayOnLink=yes"
+fi
 
 # Decide systemd-networkd DHCP mode based on what we detected
 NETWORKD_DHCP=""
@@ -193,9 +198,6 @@ fi
 NS_V4=$(echo "$NAMESERVERS" | tr ' ' '\n' | awk -F: 'NF==1' | xargs)
 NS_V6=$(echo "$NAMESERVERS" | tr ' ' '\n' | awk -F: 'NF>1' | xargs)
 
-if [ -n "$IPV4_ADDR" ]; then echo "IPv4: $IPV4_ADDR/$IPV4_PREFIX gw $IPV4_GATEWAY"; else echo "IPv4: (none)"; fi
-if [ -n "$IPV6_ADDR" ]; then echo "IPv6: $IPV6_ADDR/$IPV6_PREFIX gw $IPV6_GATEWAY"; else echo "IPv6: (none)"; fi
-[ -n "$NAMESERVERS" ] && echo "DNS: $NAMESERVERS"
 
 echo -e "${aoiBlue}Start configuring pre-installed file...${plain}"
 mkdir temp_initrd
@@ -203,6 +205,7 @@ cd temp_initrd
 gunzip -c ../initrd.gz | cpio -i
 
 cat << EOF > preseed.cfg
+
 d-i debian-installer/locale string en_US.UTF-8
 d-i debian-installer/language string en
 d-i debian-installer/country string CN
@@ -213,9 +216,9 @@ d-i passwd/root-password-again password $passwd
 d-i user-setup/allow-password-weak boolean true
 
 ### Network configuration
+# Configure networking during install based on the current system values.
 d-i netcfg/choose_interface select $PRIMARY_IFACE
-# Prefer static IPv4 if detected; otherwise allow DHCP/Autoconfig during install
-# (final config is enforced in late_command above)
+# IPv4 static when detected; otherwise allow autoconfig
 ${IPV4_ADDR:+d-i netcfg/disable_autoconfig boolean true}
 ${IPV4_ADDR:+d-i netcfg/dhcp_failed note}
 ${IPV4_ADDR:+d-i netcfg/dhcp_options select Configure network manually}
@@ -224,8 +227,11 @@ ${IPV4_NETMASK:+d-i netcfg/get_netmask string $IPV4_NETMASK}
 ${IPV4_GATEWAY:+d-i netcfg/get_gateway string $IPV4_GATEWAY}
 d-i netcfg/get_nameservers string $NAMESERVERS
 ${IPV4_ADDR:+d-i netcfg/confirm_static boolean true}
-# Always keep IPv6 enabled; if IPv6-only, installer will use SLAAC/DHCPv6
+# IPv6: enable and seed static values if detected; otherwise allow RA/DHCPv6
  d-i netcfg/enable_ipv6 boolean true
+${IPV6_ADDR:+d-i netcfg/ipv6/address string $IPV6_ADDR}
+${IPV6_PREFIX:+d-i netcfg/ipv6/prefix-length string $IPV6_PREFIX}
+${IPV6_GATEWAY:+d-i netcfg/ipv6/gateway string $IPV6_GATEWAY}
 
 ### Low memory mode
 d-i lowmem/low note
@@ -268,10 +274,9 @@ d-i partman/choose_partition select finish
 d-i partman/confirm boolean true
 
 ### Package selection
-tasksel tasksel/first multiselect minimal ssh-server
-d-i pkgsel/include string lrzsz net-tools vim rsync socat curl sudo wget telnet iptables gpg zsh python3 pip nmap tree iperf3 vnstat iptables-persistent ufw
+tasksel tasksel/first multiselect standard, ssh-server
+# d-i pkgsel/include string lrzsz net-tools vim rsync socat curl sudo wget telnet iptables gpg zsh python3 python3-pip nmap tree iperf3 vnstat ufw
 
-# Automatic updates are not applied, everything is updated manually.
 d-i pkgsel/update-policy select none
 d-i pkgsel/upgrade select none
 
@@ -283,17 +288,7 @@ d-i grub-installer/bootdev string /dev/$DEVICE_PREFIX
 d-i preseed/late_command string \
 sed -ri 's/^#?PermitRootLogin.*/PermitRootLogin yes/g' /target/etc/ssh/sshd_config; \
 sed -ri 's/^#?Port.*/Port ${sshPORT}/g' /target/etc/ssh/sshd_config; \
-${BBR} \
-in-target mkdir -p /etc/systemd/network; \
-in-target bash -c 'cat > /etc/systemd/network/10-debian-dd.network <<\"NWEOF\"\n[Match]\nName=${PRIMARY_IFACE}\n\n[Network]\nIPv6AcceptRA=yes\n${NETWORKD_DHCP:+${NETWORKD_DHCP}}\n${IPV4_ADDR:+Address=${IPV4_ADDR}/${IPV4_PREFIX}}\n${IPV4_GATEWAY:+Gateway=${IPV4_GATEWAY}}\n${IPV6_ADDR:+Address=${IPV6_ADDR}/${IPV6_PREFIX}}\n${IPV6_GATEWAY:+Gateway=${IPV6_GATEWAY}}\nNWEOF'; \
-in-target systemctl enable systemd-networkd.service; \
-in-target systemctl restart systemd-networkd.service; \
-in-target mkdir -p /etc/systemd/resolved.conf.d; \
-in-target bash -c 'cat > /etc/systemd/resolved.conf.d/99-debian-dd.conf <<\"RSVEOF\"\n[Resolve]\nDNS=${NAMESERVERS}\nDomains=~.\nRSVEOF'; \
-in-target ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf; \
-in-target systemctl enable systemd-resolved.service; \
-in-target systemctl restart systemd-resolved.service; \
-
+${BBR}
 ### Shutdown machine
 d-i finish-install/reboot_in_progress note
 EOF
@@ -314,7 +309,15 @@ sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=2/' /etc/default/grub
 
 update-grub 
 
-echo -en "\n${aoiBlue}Configuration complete...${plain}\n"
+echo "-----------------------------------------------------------------"
+echo "Reinstall summary (what the installer will use):"
+echo "  Root disk      : /dev/${DEVICE_PREFIX} (GRUB target)"
+echo "  Boot partition : (hd0,${partitionr_root_number}) in GRUB entry"
+echo "  Interface      : ${PRIMARY_IFACE}"
+if [ -n "${IPV4_ADDR}" ]; then echo "  IPv4           : ${IPV4_ADDR}/${IPV4_PREFIX}  gw ${IPV4_GATEWAY}"; else echo "  IPv4           : (none)"; fi
+if [ -n "${IPV6_ADDR}" ]; then echo "  IPv6           : ${IPV6_ADDR}/${IPV6_PREFIX}  gw ${IPV6_GATEWAY}"; else echo "  IPv6           : (none)"; fi
+echo "  DNS            : ${NAMESERVERS}"
+echo "-----------------------------------------------------------------\n"
 
 echo -ne "\n[${aoiBlue}Finish${plain}] Input '${red}reboot${plain}' to continue the subsequential installation.\n"
 exit 1
