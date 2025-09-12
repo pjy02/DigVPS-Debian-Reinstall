@@ -161,9 +161,9 @@ if [ -n "$IPV6_GATEWAY" ] && echo "$IPV6_GATEWAY" | grep -qi '^fe80:'; then
     IPV6_GW_ONLINK="GatewayOnLink=yes"
 fi
 
-# Decide whether to accept IPv6 RA for auto-config (use RA if no static IPv6 detected)
-IPV6_ACCEPT_RA="no"
-[ -z "$IPV6_ADDR" ] && IPV6_ACCEPT_RA="yes"
+# Decide whether to accept IPv6 RA for auto-config (only emit when needed)
+IPV6_ACCEPT_RA_LINE=""
+[ -z "$IPV6_ADDR" ] && IPV6_ACCEPT_RA_LINE="IPv6AcceptRA=yes"
 
 # Decide systemd-networkd DHCP mode based on what we detected
 NETWORKD_DHCP=""
@@ -202,12 +202,14 @@ else
     NS_V6="$GOOGLE_NS_V6"
 fi
 
- # Combine back; keep order v4 first then v6
+# Combine back; keep order v4 first then v6
 NAMESERVERS="$(echo $NS_V4 $NS_V6 | xargs)"
 # Safety: always have a fallback so resolv.conf is not left empty
 if [ -z "$NAMESERVERS" ]; then
     NAMESERVERS="$GOOGLE_NS_V4 $GOOGLE_NS_V6"
 fi
+# Prepare systemd-networkd DNS line (per-link DNS for resolved)
+NETWORKD_DNS_LINE="DNS=$NAMESERVERS"
 
 echo -en "\n${aoiBlue}Download boot file...${plain}\n"
 wget -q -O linux "https://ftp.debian.org/debian/dists/$debian_version/main/installer-amd64/current/images/netboot/debian-installer/amd64/linux" || { echo "Error: failed to download netboot kernel (linux)." >&2; exit 1; }
@@ -309,8 +311,9 @@ ${BBR} \
  'Name=${PRIMARY_IFACE}' \
  '' \
  '[Network]' \
+ ${NETWORKD_DNS_LINE:+"'${NETWORKD_DNS_LINE}'"} \
  ${NETWORKD_DHCP:+"'${NETWORKD_DHCP}'"} \
- ${IPV6_ACCEPT_RA:+"'IPv6AcceptRA=${IPV6_ACCEPT_RA}'"} \
+ ${IPV6_ACCEPT_RA_LINE:+"'${IPV6_ACCEPT_RA_LINE}'"} \
  ${IPV4_ADDR:+"'Address=${IPV4_ADDR}/${IPV4_PREFIX}'"} \
  ${IPV4_GATEWAY:+"'Gateway=${IPV4_GATEWAY}'"} \
  ${IPV6_ADDR:+"'Address=${IPV6_ADDR}/${IPV6_PREFIX}'"} \
