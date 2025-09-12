@@ -17,12 +17,8 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "-----------------------------------------------------------------"
-echo -e "This script was written by『${aoiBlue}DigVPS.COM』{plain}"
+echo -e "This script was written by ${aoiBlue}DigVPS.COM${plain}"
 echo -e "${aoiBlue}VPS Review Site${plain}: https://digvps.com/"
-echo "-----------------------------------------------------------------"
-echo "Welcome to subscribe to my channel"
-echo -e "${aoiBlue}YouTube${plain}：https://www.youtube.com/channel/UCINmrFonh6v0VTyWhudSQ2w"
-echo -e "${aoiBlue}bilibili${plain}：https://space.bilibili.com/88900889"
 echo "-----------------------------------------------------------------"
 
 echo -en "\n${aoiBlue}Installation dependencies...${plain}\n"
@@ -165,6 +161,10 @@ if [ -n "$IPV6_GATEWAY" ] && echo "$IPV6_GATEWAY" | grep -qi '^fe80:'; then
     IPV6_GW_ONLINK="GatewayOnLink=yes"
 fi
 
+# Decide whether to accept IPv6 RA for auto-config (use RA if no static IPv6 detected)
+IPV6_ACCEPT_RA="no"
+[ -z "$IPV6_ADDR" ] && IPV6_ACCEPT_RA="yes"
+
 # Decide systemd-networkd DHCP mode based on what we detected
 NETWORKD_DHCP=""
 if [ -z "$IPV4_ADDR" ] && [ -z "$IPV6_ADDR" ]; then
@@ -202,8 +202,12 @@ else
     NS_V6="$GOOGLE_NS_V6"
 fi
 
-# Combine back; keep order v4 first then v6
+ # Combine back; keep order v4 first then v6
 NAMESERVERS="$(echo $NS_V4 $NS_V6 | xargs)"
+# Safety: always have a fallback so resolv.conf is not left empty
+if [ -z "$NAMESERVERS" ]; then
+    NAMESERVERS="$GOOGLE_NS_V4 $GOOGLE_NS_V6"
+fi
 
 echo -en "\n${aoiBlue}Download boot file...${plain}\n"
 wget -q -O linux "https://ftp.debian.org/debian/dists/$debian_version/main/installer-amd64/current/images/netboot/debian-installer/amd64/linux" || { echo "Error: failed to download netboot kernel (linux)." >&2; exit 1; }
@@ -298,27 +302,27 @@ sed -ri 's/^#?PermitRootLogin.*/PermitRootLogin yes/g' /target/etc/ssh/sshd_conf
 sed -ri 's/^#?Port.*/Port ${sshPORT}/g' /target/etc/ssh/sshd_config; \
 ${BBR} \
  in-target apt-get update; \
- in-target apt-get -y install systemd-networkd systemd-resolved; \
+ in-target apt-get -y install systemd-networkd; \
  in-target mkdir -p /etc/systemd/network; \
  in-target /bin/sh -c "printf '%s\n' \
  '[Match]' \
  'Name=${PRIMARY_IFACE}' \
  '' \
  '[Network]' \
- 'IPv6AcceptRA=no' \
+ ${NETWORKD_DHCP:+"'${NETWORKD_DHCP}'"} \
+ ${IPV6_ACCEPT_RA:+"'IPv6AcceptRA=${IPV6_ACCEPT_RA}'"} \
  ${IPV4_ADDR:+"'Address=${IPV4_ADDR}/${IPV4_PREFIX}'"} \
  ${IPV4_GATEWAY:+"'Gateway=${IPV4_GATEWAY}'"} \
  ${IPV6_ADDR:+"'Address=${IPV6_ADDR}/${IPV6_PREFIX}'"} \
  ${IPV6_GATEWAY:+"'Gateway=${IPV6_GATEWAY}'"} \
  ${IPV6_GW_ONLINK:+"'GatewayOnLink=yes'"} \
- ${NAMESERVERS:+"'DNS=${NAMESERVERS}'"} \
  > /etc/systemd/network/10-${PRIMARY_IFACE}.network"; \
- in-target /usr/bin/env NAMESERVERS="${NAMESERVERS}" /bin/sh -c 'if [ -e /run/systemd/resolve/stub-resolv.conf ]; then ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf; elif [ -e /run/systemd/resolve/resolv.conf ]; then ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf; else : > /etc/resolv.conf; for ns in $NAMESERVERS; do [ -n "$ns" ] && printf "nameserver %s\n" "$ns" >> /etc/resolv.conf; done; fi'; \
-in-target systemctl enable systemd-networkd.service; \
-in-target systemctl enable systemd-resolved.service; \
-in-target systemctl restart systemd-networkd.service; \
-in-target systemctl restart systemd-resolved.service; \
-in-target apt-get -y purge ifupdown || true;
+ in-target apt-get -y install systemd-resolved; \
+ in-target ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf; \
+ in-target systemctl enable --now systemd-resolved.service; \
+ in-target systemctl enable systemd-networkd.service; \
+ in-target systemctl restart systemd-networkd.service; \
+ in-target apt-get -y purge ifupdown || true;
 ### Shutdown machine
 d-i finish-install/reboot_in_progress note
 EOF
