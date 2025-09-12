@@ -21,8 +21,6 @@ echo -e "This script was written by ${aoiBlue}DigVPS.COM${plain}"
 echo -e "${aoiBlue}VPS Review Site${plain}: https://digvps.com/"
 echo "-----------------------------------------------------------------"
 
-echo -en "\n${aoiBlue}Installation dependencies...${plain}\n"
-
 debian_version="trixie"
 
 echo -en "\n${aoiBlue}Start installing Debian $debian_version...${plain}\n"
