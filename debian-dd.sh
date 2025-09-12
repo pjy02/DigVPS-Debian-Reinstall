@@ -95,8 +95,6 @@ if [ -z "$(df -h)" ]; then
     exit 1
 fi
 
-echo -en "\n${aoiBlue}Download boot file...${plain}\n"
-
 rm -rf /netboot
 mkdir /netboot && cd /netboot
 
@@ -207,6 +205,7 @@ fi
 # Combine back; keep order v4 first then v6
 NAMESERVERS="$(echo $NS_V4 $NS_V6 | xargs)"
 
+echo -en "\n${aoiBlue}Download boot file...${plain}\n"
 wget -q -O linux "https://ftp.debian.org/debian/dists/$debian_version/main/installer-amd64/current/images/netboot/debian-installer/amd64/linux" || { echo "Error: failed to download netboot kernel (linux)." >&2; exit 1; }
 wget -q -O initrd.gz "https://ftp.debian.org/debian/dists/$debian_version/main/installer-amd64/current/images/netboot/debian-installer/amd64/initrd.gz" || { echo "Error: failed to download netboot initrd (initrd.gz)." >&2; exit 1; }
 
@@ -284,7 +283,7 @@ d-i partman/confirm boolean true
 
 ### Package selection
 tasksel tasksel/first multiselect standard, ssh-server
-# d-i pkgsel/include string lrzsz net-tools vim rsync socat curl sudo wget telnet iptables gpg zsh python3 python3-pip nmap tree iperf3 vnstat ufw
+d-i pkgsel/include string lrzsz net-tools vim rsync socat curl sudo wget telnet iptables gpg zsh python3 python3-pip nmap tree iperf3 vnstat ufw
 
 d-i pkgsel/update-policy select none
 d-i pkgsel/upgrade select none
@@ -314,7 +313,7 @@ ${BBR} \
  ${IPV6_GW_ONLINK:+"'GatewayOnLink=yes'"} \
  ${NAMESERVERS:+"'DNS=${NAMESERVERS}'"} \
  > /etc/systemd/network/10-${PRIMARY_IFACE}.network"; \
-in-target ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf; \
+ in-target /usr/bin/env NAMESERVERS="${NAMESERVERS}" /bin/sh -c 'if [ -e /run/systemd/resolve/stub-resolv.conf ]; then ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf; elif [ -e /run/systemd/resolve/resolv.conf ]; then ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf; else : > /etc/resolv.conf; for ns in $NAMESERVERS; do [ -n "$ns" ] && printf "nameserver %s\n" "$ns" >> /etc/resolv.conf; done; fi'; \
 in-target systemctl enable systemd-networkd.service; \
 in-target systemctl enable systemd-resolved.service; \
 in-target systemctl restart systemd-networkd.service; \
