@@ -2,25 +2,21 @@
 
 A Debian reinstallation script
 
-**Currently only supports X86 64Bit platforms, reinstallation requires the original system to be debian or ubuntu. the script will not set ipv6.**
+This script only supports reinstalling the system to Debian 13, and it requires the original system to be either Debian or Ubuntu. 
+
+In addition, we do not have the resources to perform extensive testing, so there is a high probability that the reinstallation may fail. In theory, if you see the final installation summary and the hard drive and IP configurations are correct, there is a good chance the reinstallation will succeed.
 
 ## 0x01 Usage
 
 ```
-# Interactive scripting with support for hostname, ssh port, password and bbr settings
-apt update
-apt install curl wget net-tools -y
 bash <(curl -sL https://github.com/bihell/debian-dd/raw/main/debian-dd.sh)
 ```
 
-## 0x02 VPS purchase
+## 0x02 VPS Choose
 
 My VPS Review Site [DigVPS.COM](https://digvps.com/)
 
-## 0x03 Subscribe to my channel
 
-[YouTube](https://www.youtube.com/channel/UCINmrFonh6v0VTyWhudSQ2w)、[bilibili](https://space.bilibili.com/88900889)
-
-## 0x04 ScreenShot
+## 0x03 ScreenShot
 
 ![](Screenshot.png)
