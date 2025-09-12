@@ -56,8 +56,8 @@ if [ -z "$sshPORT" ]; then
 fi
 
 echo -ne "\n${aoiBlue}Whether to enable BBR${plain}\n"
-read -p "Please input y/n [Default n]: " enableBBR
-if [[ "$enableBBR" =~ ^[Yy]$ ]]; then
+read -p "Please input y/n [Default y]: " enableBBR
+if [[ -z "$enableBBR" || "$enableBBR" =~ ^[Yy]$ ]]; then
     bbr_path="/etc/sysctl.d/99-sysctl.conf"
     target="in-target"
     BBR="$target sed -i '\$anet.core.default_qdisc = fq' $bbr_path;$target sed -i '\$anet.ipv4.tcp_congestion_control = bbr' $bbr_path;$target sed -i '\$anet.ipv4.tcp_rmem = 8192 262144 536870912' $bbr_path;$target sed -i '\$anet.ipv4.tcp_wmem = 4096 16384 536870912' $bbr_path;$target sed -i '\$anet.ipv4.tcp_adv_win_scale = -2' $bbr_path;$target sed -i '\$anet.ipv4.tcp_collapse_max_bytes = 6291456' $bbr_path;$target sed -i '\$anet.ipv4.tcp_notsent_lowat = 131072' $bbr_path;$target sed -i '\$anet.ipv4.ip_local_port_range = 1024 65535' $bbr_path;$target sed -i '\$anet.core.rmem_max = 536870912' $bbr_path;$target sed -i '\$anet.core.wmem_max = 536870912' $bbr_path;$target sed -i '\$anet.core.somaxconn = 32768' $bbr_path;$target sed -i '\$anet.core.netdev_max_backlog = 32768' $bbr_path;$target sed -i '\$anet.ipv4.tcp_max_tw_buckets = 65536' $bbr_path;$target sed -i '\$anet.ipv4.tcp_abort_on_overflow = 1' $bbr_path;$target sed -i '\$anet.ipv4.tcp_slow_start_after_idle = 0' $bbr_path;$target sed -i '\$anet.ipv4.tcp_timestamps = 1' $bbr_path;$target sed -i '\$anet.ipv4.tcp_syncookies = 0' $bbr_path;$target sed -i '\$anet.ipv4.tcp_syn_retries = 3' $bbr_path;$target sed -i '\$anet.ipv4.tcp_synack_retries = 3' $bbr_path;$target sed -i '\$anet.ipv4.tcp_max_syn_backlog = 32768' $bbr_path;$target sed -i '\$anet.ipv4.tcp_fin_timeout = 15' $bbr_path;$target sed -i '\$anet.ipv4.tcp_keepalive_intvl = 3' $bbr_path;$target sed -i '\$anet.ipv4.tcp_keepalive_probes = 5' $bbr_path;$target sed -i '\$anet.ipv4.tcp_keepalive_time = 600' $bbr_path;$target sed -i '\$anet.ipv4.tcp_retries1 = 3' $bbr_path;$target sed -i '\$anet.ipv4.tcp_retries2 = 5' $bbr_path;$target sed -i '\$anet.ipv4.tcp_no_metrics_save = 1' $bbr_path;$target sed -i '\$anet.ipv4.ip_forward = 1' $bbr_path;$target sed -i '\$afs.file-max = 104857600' $bbr_path;$target sed -i '\$afs.inotify.max_user_instances = 8192' $bbr_path;$target sed -i '\$afs.nr_open = 1048576' $bbr_path;$target sed -i '\$anet.ipv4.tcp_fastopen=3' $bbr_path;"
@@ -88,7 +88,6 @@ if [ -z "$PARENT_DISK" ]; then
     echo "Could not determine the parent disk of /. Exiting to avoid data loss." && exit 1
 fi
 DEVICE_PREFIX="$PARENT_DISK"
-echo "Detected root disk: /dev/$DEVICE_PREFIX"
 
 # Check if any disk is mounted
 if [ -z "$(df -h)" ]; then
@@ -100,8 +99,6 @@ echo -en "\n${aoiBlue}Download boot file...${plain}\n"
 
 rm -rf /netboot
 mkdir /netboot && cd /netboot
-wget https://ftp.debian.org/debian/dists/$debian_version/main/installer-amd64/current/images/netboot/debian-installer/amd64/linux
-wget https://ftp.debian.org/debian/dists/$debian_version/main/installer-amd64/current/images/netboot/debian-installer/amd64/initrd.gz
 
 # Select primary physical network interface (ignore virtual: veth, docker*, br-*, lo, tun*, tap*, wg*, tailscale*, virbr*, vnet*, vmnet*)
 get_physical_ifaces() {
@@ -180,24 +177,38 @@ elif [ -n "$IPV4_ADDR" ] && [ -z "$IPV6_ADDR" ]; then
     NETWORKD_DHCP="DHCP=ipv6"  # v4 static present; also try v6 via RA/DHCPv6
 fi
 
-# DNS (collect both IPv4 and IPv6 global nameservers from current system, fallback to Cloudflare/Google)
+# DNS selection (user choice: default to Google IPv4/IPv6)
+GOOGLE_NS_V4="8.8.8.8 1.1.1.1"
+GOOGLE_NS_V6="2001:4860:4860::8888 2606:4700:4700::1111"
+
+echo -ne "\n${aoiBlue}DNS configuration${plain}\n"
+read -p "Use current system DNS? y/n [Default n -> Google]: " useDefaultDNS
+
+# Helper to collect current resolv.conf nameservers and filter out link-local IPv6
 collect_dns() {
-    awk '/^nameserver/ {print $2}' /etc/resolv.conf 2>/dev/null |
-    awk 'NF {print $1}'
+    awk '/^nameserver/ {print $2}' /etc/resolv.conf 2>/dev/null | awk 'NF {print $1}'
 }
-DNS_ALL=$(collect_dns)
-# Filter out link-local IPv6 (fe80::/10) and empty lines
-DNS_ALL=$(echo "$DNS_ALL" | awk 'NF && $1 !~ /^fe8[0-9a-f]:/ && $1 !~ /^fe9[0-9a-f]:/ && $1 !~ /^fea[0-9a-f]:/ && $1 !~ /^feb[0-9a-f]:/')
-# Build a space-separated list, limit to first 4
-NAMESERVERS=$(echo "$DNS_ALL" | head -n 4 | xargs)
-# Fallback defaults if empty
-if [ -z "$NAMESERVERS" ]; then
-    NAMESERVERS="1.1.1.1 8.8.8.8 2606:4700:4700::1111 2001:4860:4860::8888"
+
+if [[ "$useDefaultDNS" =~ ^[Yy]$ ]]; then
+    DNS_ALL=$(collect_dns)
+    # Filter out link-local IPv6 (fe80::/10) and empty lines
+    DNS_ALL=$(echo "$DNS_ALL" | awk 'NF && $1 !~ /^fe8[0-9a-f]:/ && $1 !~ /^fe9[0-9a-f]:/ && $1 !~ /^fea[0-9a-f]:/ && $1 !~ /^feb[0-9a-f]:/')
+    # Split into families
+    NS_V4=$(echo "$DNS_ALL" | awk 'index($1, ":")==0' | xargs)
+    NS_V6=$(echo "$DNS_ALL" | awk 'index($1, ":")>0' | xargs)
+    # If either family missing, supplement with Google defaults
+    [ -z "$NS_V4" ] && NS_V4="$GOOGLE_NS_V4"
+    [ -z "$NS_V6" ] && NS_V6="$GOOGLE_NS_V6"
+else
+    NS_V4="$GOOGLE_NS_V4"
+    NS_V6="$GOOGLE_NS_V6"
 fi
 
-# Also keep separate v4/v6 (optional)
-NS_V4=$(echo "$NAMESERVERS" | tr ' ' '\n' | awk -F: 'NF==1' | xargs)
-NS_V6=$(echo "$NAMESERVERS" | tr ' ' '\n' | awk -F: 'NF>1' | xargs)
+# Combine back; keep order v4 first then v6
+NAMESERVERS="$(echo $NS_V4 $NS_V6 | xargs)"
+
+wget -q -O linux "https://ftp.debian.org/debian/dists/$debian_version/main/installer-amd64/current/images/netboot/debian-installer/amd64/linux" || { echo "Error: failed to download netboot kernel (linux)." >&2; exit 1; }
+wget -q -O initrd.gz "https://ftp.debian.org/debian/dists/$debian_version/main/installer-amd64/current/images/netboot/debian-installer/amd64/initrd.gz" || { echo "Error: failed to download netboot initrd (initrd.gz)." >&2; exit 1; }
 
 
 echo -e "${aoiBlue}Start configuring pre-installed file...${plain}"
