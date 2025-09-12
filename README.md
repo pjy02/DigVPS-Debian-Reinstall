@@ -1,6 +1,7 @@
 <div align="center">
 
-# Debian-DD
+# DigVPS-Debian-Reinstall
+
 
 **A lightweight script for reinstalling your server with Debian 13**
 
@@ -16,7 +17,7 @@ In theory, if the final installation summary shows correct disk and IP settings,
 ## 🚀 Usage
 
 ```shell
-bash <(curl -sL https://github.com/bihell/debian-dd/raw/main/debian-dd.sh)
+bash <(curl -sL https://github.com/bihell/DigVPS-Debian-Reinstall/raw/main/debian-dd.sh)
 ```
 
 ## 🔍 VPS Recommendation
