@@ -167,9 +167,14 @@ fi
 if [ -z "$PRIMARY_IFACE" ]; then
     PRIMARY_IFACE=$(get_physical_ifaces | head -n1)
 fi
+
 if [ -z "$PRIMARY_IFACE" ]; then
     echo "No physical network interface detected." && exit 1
 fi
+
+# Derive stable match key for post-install network config (prefer MAC over name)
+IF_MAC=$(cat "/sys/class/net/$PRIMARY_IFACE/address" 2>/dev/null | tr '[:upper:]' '[:lower:]')
+[ -n "$IF_MAC" ] && MATCH_LINE="MACAddress=$IF_MAC" || MATCH_LINE="Name=$PRIMARY_IFACE"
 
 # IPv4 details
 IPV4_CIDR=$(ip -4 -o addr show dev "$PRIMARY_IFACE" scope global | awk '{print $4}' | head -n1)
@@ -281,7 +286,7 @@ d-i user-setup/allow-password-weak boolean true
 
 ### Network configuration
 # Configure networking during install based on the current system values.
-d-i netcfg/choose_interface select $PRIMARY_IFACE
+d-i netcfg/choose_interface select auto
 # IPv4 static when detected; otherwise allow autoconfig
 ${IPV4_ADDR:+d-i netcfg/disable_autoconfig boolean true}
 ${IPV4_ADDR:+d-i netcfg/dhcp_failed note}
@@ -355,7 +360,7 @@ ${BBR} \
  in-target mkdir -p /etc/systemd/network; \
  in-target /bin/sh -c "printf '%s\n' \
  '[Match]' \
- 'Name=${PRIMARY_IFACE}' \
+ '${MATCH_LINE}' \
  '' \
  '[Network]' \
  ${NETWORKD_DNS_LINE:+"'${NETWORKD_DNS_LINE}'"} \
@@ -366,7 +371,7 @@ ${BBR} \
  ${IPV6_ADDR:+"'Address=${IPV6_ADDR}/${IPV6_PREFIX}'"} \
  ${IPV6_GATEWAY:+"'Gateway=${IPV6_GATEWAY}'"} \
  ${IPV6_GW_ONLINK:+"'GatewayOnLink=yes'"} \
- > /etc/systemd/network/10-${PRIMARY_IFACE}.network"; \
+ > /etc/systemd/network/10-main.network"; \
  in-target apt-get -y install systemd-resolved; \
  in-target ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf; \
  in-target systemctl enable --now systemd-resolved.service; \
