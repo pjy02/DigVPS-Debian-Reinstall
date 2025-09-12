@@ -1,22 +1,28 @@
+<div align="center">
+
 # Debian-DD
 
-A Debian reinstallation script
+**A lightweight script for reinstalling your server with Debian 13**
 
-This script only supports reinstalling the system to Debian 13, and it requires the original system to be either Debian or Ubuntu. 
+</div>
 
-In addition, we do not have the resources to perform extensive testing, so there is a high probability that the reinstallation may fail. In theory, if you see the final installation summary and the hard drive and IP configurations are correct, there is a good chance the reinstallation will succeed.
+---
 
-## 0x01 Usage
+⚠️ **Note:**  
+This script only supports reinstalling the system to **Debian 13**, and requires the original system to be **Debian** or **Ubuntu**.  
+Since we have not conducted extensive testing, there is a high probability that the reinstallation may fail.  
+In theory, if the final installation summary shows correct disk and IP settings, the reinstallation is likely to succeed.
 
-```
+## 🚀 Usage
+
+```shell
 bash <(curl -sL https://github.com/bihell/debian-dd/raw/main/debian-dd.sh)
 ```
 
-## 0x02 VPS Choose
+## 🔍 VPS Recommendation
 
-My VPS Review Site [DigVPS.COM](https://digvps.com/)
+Check out my VPS review site: **[DigVPS.COM](https://digvps.com/)**
 
-
-## 0x03 ScreenShot
+## 📸 Screenshot
 
 ![](Screenshot.png)
