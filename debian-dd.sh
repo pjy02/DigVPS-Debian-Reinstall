@@ -17,49 +17,29 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "-----------------------------------------------------------------"
-echo "This script was written by『数码乱炖』"
+echo "This script was written by『DigVPS』"
 echo "If you have any questions, please raise an issue. "
 echo -e "${aoiBlue}GitHub${plain}: https://github.com/bihell/debian-dd"
-echo -e "${aoiBlue}VPS document${plain}: https://bigdata.icu/tools/vps.html"
+echo -e "${aoiBlue}VPS Review Site${plain}: https://digvps.com/"
 echo "-----------------------------------------------------------------"
 echo "Welcome to subscribe to my channel"
 echo -e "${aoiBlue}YouTube${plain}：https://www.youtube.com/channel/UCINmrFonh6v0VTyWhudSQ2w"
 echo -e "${aoiBlue}bilibili${plain}：https://space.bilibili.com/88900889"
-echo -e "${aoiBlue}xigua${plain}：https://www.ixigua.com/home/940801951008103"
-echo "-----------------------------------------------------------------"
+=echo "-----------------------------------------------------------------"
 
 echo -en "\n${aoiBlue}Installation dependencies...${plain}\n"
 apt update
 apt install wget net-tools -y
 
-echo -en "\n${aoiBlue}Supported Versions:${plain}\n"
-echo "[1] Debian 12 bookworm"
-echo "[2] Debian 11 bullseye"
-echo "[3] Debian 10 buster"
-read -p "Please select [Default 1]:" version
 
-if [ -z "$version" ]; then
-    version=0
-fi
-
-if [ "$version" == "0" ] || [ "$version" == "1" ]; then
-    debian_version="bookworm"
-elif [ "$version" == "2" ]; then
-    debian_version="bullseye"
-elif [ "$version" == "3" ]; then
-    debian_version="buster"
-else 
-    echo -e "${aoiBlue}No correct option entered, ready to exit...${plain}"
-    sleep 1
-    exit
-fi
+debian_version="trixie"
 
 echo -en "\n${aoiBlue}Start installing Debian $debian_version...${plain}\n"
 
 echo -en "\n${aoiBlue}Set hostname:${plain}\n"
 read -p "Please input [Default digital-review]:" HostName
 if [ -z "$HostName" ]; then
-    HostName="digital-review"
+    HostName="digvps.com"
 fi
 
 echo -ne "\n${aoiBlue}Set root password${plain}\n"
