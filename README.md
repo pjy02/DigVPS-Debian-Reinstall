@@ -22,7 +22,7 @@ bash <(curl -sL https://github.com/bihell/DigVPS-Debian-Reinstall/raw/main/debia
 
 ## 🔍 VPS Recommendation
 
-Check out my VPS review site: **[DigVPS.COM](https://digvps.com/)**
+Check out our VPS review site: **[DigVPS.COM](https://digvps.com/)**
 
 ## 📸 Screenshot
 
