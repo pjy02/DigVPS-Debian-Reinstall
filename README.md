@@ -3,30 +3,30 @@
 # DigVPS-Debian-Reinstall
 
 
-**A lightweight script for reinstalling your server with Debian 13**
+**一个用于将服务器重装为 Debian 13 的轻量级脚本**
 
 </div>
 
 ---
 
-⚠️ **Note:**  
+⚠️ **注意：**  
 
-This script only supports reinstalling the system to **Debian 13**, and requires the original system to be **Debian** or **Ubuntu**.  
+此脚本仅支持将系统重装为 **Debian 13**，并且要求原系统为 **Debian** 或 **Ubuntu**。  
 
-Since we have not conducted extensive testing, there is a high probability that the reinstallation may fail.  
+由于我们尚未进行广泛测试，重装可能存在较高的失败概率。  
 
-In theory, if the final installation summary shows correct disk and IP settings, the reinstallation is likely to succeed.
+理论上，如果最终的安装摘要显示正确的磁盘和 IP 设置，重装很可能会成功。
 
-## 🚀 Usage
+## 🚀 使用方法
 
 ```shell
-bash <(curl -sL https://github.com/bihell/DigVPS-Debian-Reinstall/raw/main/debian-dd.sh)
+bash <(curl -sL https://raw.githubusercontent.com/pjy02/DigVPS-Debian-Reinstall/refs/heads/main/debian-dd.sh)
 ```
 
-## 🔍 VPS Recommendation
+## 🔍 VPS 推荐
 
-Check out our VPS review site: **[DigVPS.COM](https://digvps.com/)**
+查看我们的 VPS 评测网站：**[DigVPS.COM](https://digvps.com/)**
 
-## 📸 Screenshot
+## 📸 截图
 
 ![](Screenshot.png)
