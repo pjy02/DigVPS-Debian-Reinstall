@@ -29,6 +29,13 @@ bash <(curl -sL https://raw.githubusercontent.com/pjy02/DigVPS-Debian-Reinstall/
 bash <(curl -sL https://raw.githubusercontent.com/pjy02/DigVPS-Debian-Reinstall/refs/heads/main/debian-dd-zh.sh)
 ```
 
+### 中国优化版（推荐中国服务器使用）
+```shell
+bash <(curl -sL https://raw.githubusercontent.com/pjy02/DigVPS-Debian-Reinstall/refs/heads/main/debian-dd-zh-cn.sh)
+```
+
+> **注意**：中国优化版专门针对中国服务器进行了优化，解决了原始脚本在中国服务器上"下载启动文件"卡住的问题。该版本支持国内镜像源和国内DNS服务器选项。
+
 ## ✨ 功能特性
 
 - **智能网络检测**：自动识别物理网络接口和网络配置
@@ -37,6 +44,9 @@ bash <(curl -sL https://raw.githubusercontent.com/pjy02/DigVPS-Debian-Reinstall/
 - **安全配置**：支持自定义 SSH 端口和随机密码生成
 - **预装软件包**：包含常用的系统管理和开发工具
 - **中文界面**：提供完全汉化的用户交互界面
+- **国内镜像源支持**（中国优化版）：支持阿里云、清华大学和网易等国内镜像源
+- **国内DNS选项**（中国优化版）：支持阿里云DNS和腾讯云DNS
+- **多镜像源自动切换**（中国优化版）：自动尝试多个镜像源，提高下载成功率
 
 ## 📋 系统要求
 
@@ -55,6 +65,8 @@ bash <(curl -sL https://raw.githubusercontent.com/pjy02/DigVPS-Debian-Reinstall/
 4. **BBR 拥塞控制**：是否启用 BBR 算法（默认：是）
 5. **高级 TCP 调优**：是否启用激进的 TCP 参数优化（默认：否）
 6. **DNS 配置**：选择使用系统 DNS 或 Google DNS（默认：Google）
+7. **国内DNS选择**（中国优化版）：选择阿里云DNS或腾讯云DNS（默认：阿里云DNS）
+8. **镜像源选择**（中国优化版）：选择阿里云、清华大学或网易镜像源（默认：阿里云镜像）
 
 ## 📦 预装软件包
 
