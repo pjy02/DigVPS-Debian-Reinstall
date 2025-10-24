@@ -29,12 +29,6 @@ bash <(curl -sL https://raw.githubusercontent.com/pjy02/DigVPS-Debian-Reinstall/
 bash <(curl -sL https://raw.githubusercontent.com/pjy02/DigVPS-Debian-Reinstall/refs/heads/main/debian-dd-zh.sh)
 ```
 
-### 中国优化版（推荐中国服务器使用）
-```shell
-bash <(curl -sL https://raw.githubusercontent.com/pjy02/DigVPS-Debian-Reinstall/refs/heads/main/debian-dd-zh-cn.sh)
-```
-
-> **注意**：中国优化版专门针对中国服务器进行了优化，解决了原始脚本在中国服务器上"下载启动文件"卡住的问题。该版本支持国内镜像源和国内DNS服务器选项。
 
 ## ✨ 功能特性
 
